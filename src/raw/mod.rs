@@ -529,6 +529,19 @@ impl<T, A: Allocator + Clone> RawTable<T, A> {
         Bucket::from_base_index(self.data_end(), index)
     }
 
+    /// Returns a pointer to an element in the table, if the corresponding ctrl is fulled.
+    #[inline]
+    #[allow(dead_code)]
+    pub unsafe fn full_bucket(&self, index: usize) -> Option<Bucket<T>> {
+        debug_assert_ne!(self.table.bucket_mask, 0);
+        debug_assert!(index < self.buckets());
+        if is_full(*self.table.ctrl(index)) {
+            Some(Bucket::from_base_index(self.data_end(), index))
+        } else {
+            None
+        }
+    }
+
     /// Erases an element from the table without dropping it.
     #[cfg_attr(feature = "inline-more", inline)]
     #[deprecated(since = "0.8.1", note = "use erase or remove instead")]
