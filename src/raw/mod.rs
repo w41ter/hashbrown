@@ -960,6 +960,26 @@ impl<T, A: Allocator + Clone> RawTable<T, A> {
         }
     }
 
+    /// Returns an iterator over every element in the table from the specified hint.
+    /// It is up to the caller to ensure that the `RawTable` outlives the `RawIter`.
+    /// Because we cannot make the `next` method unsafe on the `RawIter`
+    /// struct, we have to make the `iter` method unsafe.
+    #[inline]
+    #[allow(dead_code)]
+    pub unsafe fn iter_with_hint(&self, hint: usize) -> RawIter<T> {
+        let hint = hint % self.capacity();
+        let data = Bucket::from_base_index(self.data_end(), 0);
+        RawIter {
+            iter: RawIterRange::new_with_hint(
+                self.table.ctrl.as_ptr(),
+                data,
+                self.table.buckets(),
+                hint,
+            ),
+            items: self.table.items,
+        }
+    }
+
     /// Returns an iterator over occupied buckets that could match a given hash.
     ///
     /// `RawTable` only stores 7 bits of the hash value, so this iterator may
@@ -1881,6 +1901,25 @@ impl<T> RawIterRange<T> {
             next_ctrl,
             end,
         }
+    }
+
+    #[cfg_attr(feature = "inline-more", inline)]
+    unsafe fn new_with_hint(ctrl: *const u8, data: Bucket<T>, len: usize, hint: usize) -> Self {
+        let mut it = Self::new(ctrl, data, len);
+
+        let skipped = (hint / Group::WIDTH) * Group::WIDTH;
+        let current_ctrl = ctrl.offset(skipped as isize);
+        it.data = it.data.next_n(skipped);
+        it.current_group = Group::load_aligned(current_ctrl).match_full();
+        it.next_ctrl = current_ctrl.add(Group::WIDTH);
+
+        while let Some(index) = it.current_group.lowest_set_bit() {
+            if index < hint % Group::WIDTH {
+                it.current_group = it.current_group.remove_lowest_bit();
+            }
+        }
+
+        it
     }
 
     /// Splits a `RawIterRange` into two halves.
