@@ -1906,9 +1906,10 @@ impl<T> RawIterRange<T> {
         it.next_ctrl = current_ctrl.add(Group::WIDTH);
 
         while let Some(index) = it.current_group.lowest_set_bit() {
-            if index < hint % Group::WIDTH {
-                it.current_group = it.current_group.remove_lowest_bit();
+            if index >= hint % Group::WIDTH {
+                break;
             }
+            it.current_group = it.current_group.remove_lowest_bit();
         }
 
         it
