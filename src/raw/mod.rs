@@ -966,18 +966,10 @@ impl<T, A: Allocator + Clone> RawTable<T, A> {
     /// struct, we have to make the `iter` method unsafe.
     #[inline]
     #[allow(dead_code)]
-    pub unsafe fn iter_with_hint(&self, hint: usize) -> RawIter<T> {
+    pub unsafe fn iter_with_hint(&self, hint: usize) -> RawIterRange<T> {
         let hint = hint & self.table.bucket_mask;
         let data = Bucket::from_base_index(self.data_end(), 0);
-        RawIter {
-            iter: RawIterRange::new_with_hint(
-                self.table.ctrl.as_ptr(),
-                data,
-                self.table.buckets(),
-                hint,
-            ),
-            items: self.table.items,
-        }
+        RawIterRange::new_with_hint(self.table.ctrl.as_ptr(), data, self.table.buckets(), hint)
     }
 
     /// Returns an iterator over occupied buckets that could match a given hash.
@@ -1865,7 +1857,7 @@ impl<T, A: Allocator + Clone> IntoIterator for RawTable<T, A> {
 
 /// Iterator over a sub-range of a table. Unlike `RawIter` this iterator does
 /// not track an item count.
-pub(crate) struct RawIterRange<T> {
+pub struct RawIterRange<T> {
     // Mask of full buckets in the current group. Bits are cleared from this
     // mask as each element is processed.
     current_group: BitMask,
