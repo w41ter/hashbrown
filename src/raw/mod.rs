@@ -967,7 +967,7 @@ impl<T, A: Allocator + Clone> RawTable<T, A> {
     #[inline]
     #[allow(dead_code)]
     pub unsafe fn iter_with_hint(&self, hint: usize) -> RawIter<T> {
-        let hint = hint % self.capacity();
+        let hint = hint & self.table.bucket_mask;
         let data = Bucket::from_base_index(self.data_end(), 0);
         RawIter {
             iter: RawIterRange::new_with_hint(
